@@ -19,15 +19,20 @@
 (def default-namespace-declaration
   '(ns graftwerk.pipeline
      (:require [grafter.tabular :refer :all]
-               [clojure.string]
-               [grafter.rdf :refer [prefixer]]
+               [clojure.string :refer [capitalize lower-case upper-case trim trim-newline triml trimr]]
+               [grafter.rdf :refer [prefixer s]]
                [grafter.rdf.templater :refer [graph]]
                [grafter.vocabularies.rdf :refer :all]
                [grafter.vocabularies.qb :refer :all]
                [grafter.vocabularies.sdmx-measure :refer :all]
                [grafter.vocabularies.sdmx-attribute :refer :all]
                [grafter.vocabularies.skos :refer :all]
-               [grafter.vocabularies.dcterms :refer :all])))
+               [grafter.vocabularies.foaf :refer :all]
+               [grafter.vocabularies.owl :refer :all]
+               [grafter.vocabularies.dcterms :refer :all])
+     (:import [gov.nasa.worldwind.geom.coords.UTMCoord]
+              [org.openrdf.model.impl.URIImpl]
+              )))
 
 (defn namespace-symbol
   "Return the namespace name for the supplied namespace form"

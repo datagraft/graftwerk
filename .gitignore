@@ -10,3 +10,7 @@ pom.xml
 *.log
 /.nrepl-port
 /requires.edn
+/graftwerk.iml
+/graftwerk.log
+/.idea
+!/maven_repository/ww-geo-coords/ww-geo-coords/1.0/ww-geo-coords-1.0.jar

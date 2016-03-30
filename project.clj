@@ -6,7 +6,7 @@
 
   :license {:name "Eclipse Public License - v1.0 (c) 2016 Swirrl IT Ltd"
             :url "https://www.eclipse.org/legal/epl-v10.html"}
-
+  :repositories {"local" ~(str (.toURI (java.io.File. "maven_repository")))}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [ring-server "0.3.1"]
                  [com.taoensso/timbre "4.0.1"]
@@ -24,7 +24,9 @@
                  [noir-exception "0.2.3"]
                  [bouncer "0.3.2"]
                  [org.slf4j/slf4j-simple "1.6.1"]
-                 [prone "0.8.0"]]
+                 [prone "0.8.0"]
+                 [ww-geo-coords "1.0"]
+                 ]
 
   :min-lein-version "2.5.0"
   :uberjar-name "graftwerk.jar"
