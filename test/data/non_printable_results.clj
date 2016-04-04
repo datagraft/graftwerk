@@ -23,7 +23,7 @@
                     [foaf:age age]
                     [foaf:name name]])))
 
-(defpipe my-pipe
+(defn my-pipe
   "Pipeline to convert tabular persons data into a different tabular format."
   [data-file]
   (-> (read-dataset data-file :format :csv)
@@ -36,6 +36,7 @@
                    }
              :name s})))
 
-(defgraft my-graft
+(defn my-graft
   "Pipeline to convert the tabular persons data sheet into graph data."
-  my-pipe make-graph)
+  [data-set]
+  (->> data-set my-pipe make-graph))
