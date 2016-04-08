@@ -16,6 +16,7 @@
             [grafter.tabular.common :as tbc]
             )
   (:import [java.io FilePermission]
+           [java.util PropertyPermission]
            (clojure.lang LispReader$ReaderException)))
 
 (def default-namespace-declaration
@@ -76,8 +77,8 @@
   "Build a clojailed sandbox configured for Grafter pipelines.  Takes
   a parsed sexp containing the grafter pipeline file."
   [pipeline-sexp file-path]
-  (let [context (-> (FilePermission. file-path "read")
-                    permissions
+  (let [
+        context (-> (permissions (FilePermission. file-path "read") (PropertyPermission. "file.separator" "read")  )
                     domain
                     context)
         namespace-form (namespace-declaration)
@@ -91,35 +92,38 @@
     (log/log-env :info "build-sandbox")
     (sb pipeline-sexp)
     sb))
-(defn- csv? [extension]
-  ;(or
-  (= extension :csv)
-  ;(= extension :txt) )
-  )
-(defn- excel? [extension]
-  (or
-    (= extension :xls)
-    (= extension :xlsx))
-  )
+;(defn- csv? [extension]
+;  ;(or
+;  (= extension :csv)
+;  ;(= extension :txt) )
+;  )
+;(defn- excel? [extension]
+;  (or
+;    (= extension :xls)
+;    (= extension :xlsx))
+;  )
+;(defn- get-read-params [extension [separator sheetname]]
+;  (let [param (cond (and (csv? extension) separator) [:separator (first (char-array separator))]
+;                    (and (excel? extension) sheetname) [:sheet sheetname]
+;                    )]
+;    param)
+;  )
+
 (defn read-dataset-with-filename-meta
   "Returns an sexp that opens a dataset with read-dataset and sets the supplied
   filename as metadata.
   Useful as ring bodges the filename with a tempfile otherwise."
-  ([data-file filename opt]
+  ([data-file filename [separator sheetname]]
    (let [extension (tbc/extension filename
                      )
-         read-data (read-dataset data-file
-                                         :format
-                                         extension
-                                         (if (and (csv? extension ) (first opt) )  :separator  )
-                                         (if (csv? extension ) (first (char-array (first opt)) ))
-                                         (if (excel? extension) :sheet)
-                                         (if (excel? extension) (second opt))
-                                         )]
-     `(with-meta ~read-data
-                 {:grafter.tabular/data-source ~filename})
-     ))
+         parameters (get-read-params extension [separator sheetname])
+         ]
 
+     `(with-meta
+        (grafter.tabular/read-dataset ~data-file :format (keyword ~extension) :separator (first (char-array ~separator)))
+        {:grafter.tabular/data-source ~filename})
+     )
+    )
   )
 
 
