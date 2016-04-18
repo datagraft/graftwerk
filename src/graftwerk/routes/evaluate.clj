@@ -92,35 +92,24 @@
     (log/log-env :info "build-sandbox")
     (sb pipeline-sexp)
     sb))
-;(defn- csv? [extension]
-;  ;(or
-;  (= extension :csv)
-;  ;(= extension :txt) )
-;  )
-;(defn- excel? [extension]
-;  (or
-;    (= extension :xls)
-;    (= extension :xlsx))
-;  )
-;(defn- get-read-params [extension [separator sheetname]]
-;  (let [param (cond (and (csv? extension) separator) [:separator (first (char-array separator))]
-;                    (and (excel? extension) sheetname) [:sheet sheetname]
-;                    )]
-;    param)
-;  )
+
+(defn decide-separator [separator-str]
+  (if (= (get separator-str :separator) "tab") \tab (first (char-array (or (get separator-str :separator)  "," ))))
+  )
+
 
 (defn read-dataset-with-filename-meta
   "Returns an sexp that opens a dataset with read-dataset and sets the supplied
   filename as metadata.
   Useful as ring bodges the filename with a tempfile otherwise."
-  ([data-file filename [separator sheetname]]
-   (let [extension (tbc/extension filename
-                     )
-         parameters (get-read-params extension [separator sheetname])
-         ]
+  ([data-file filename opt ]
+   (let [separ (decide-separator opt)]
 
      `(with-meta
-        (grafter.tabular/read-dataset ~data-file :format (keyword ~extension) :separator (first (char-array ~separator)))
+        (grafter.tabular/read-dataset ~data-file :format :csv :separator ~separ
+                                      ;(keyword ~extension)
+                                      ;:separator (first (char-array ~separator))
+                                      )
         {:grafter.tabular/data-source ~filename})
      )
     )
@@ -173,7 +162,7 @@
                     code
                     ")"))))
 
-(defn execute-pipeline [data command pipeline & opt]
+(defn execute-pipeline [data command pipeline opt]
   "Takes the data to operate on (a ring file map) a command (a
   function name for a pipe or graft) and a pipeline clojure file and
   returns a Grafter dataset."
@@ -190,7 +179,7 @@
         (if-invalid [errors (validate-pipe-run-request params)]
                      {:status 422 :body errors}
                      {:status 200 :body (-> data
-                                            (execute-pipeline command pipeline delimiter sheet-name)
+                                            (execute-pipeline command pipeline {:separator delimiter } )
                                             (paginate page-size page))})))
 
 (defn graft-command-form?
@@ -264,8 +253,8 @@
                          (if-let [row (and (not (blank? row)) (Integer/parseInt row))]
                            {:status 200 :body (preview-graft-with-row row data command pipeline (if (= "on" constants)
                                                                                              true
-                                                                                             false) delimiter sheet-name)}
-                           {:status 200 :body (execute-pipeline data command pipeline delimiter sheet-name)}))))
+                                                                                             false) {:separator delimiter })}
+                           {:status 200 :body (execute-pipeline data command pipeline {:separator delimiter })}))))
 
 (comment
 
