@@ -22,6 +22,8 @@
                [clojure.string :refer [capitalize lower-case upper-case trim trim-newline triml trimr]]
                [grafter.rdf :refer [prefixer s]]
                [grafter.rdf.templater :refer [graph]]
+               [tabular_functions.datatypes :as datatypes]
+               [tabular_functions.pipeline :as new-tabular]
                [grafter.vocabularies.rdf :refer :all]
                [grafter.vocabularies.qb :refer :all]
                [grafter.vocabularies.sdmx-measure :refer :all]

@@ -18,6 +18,7 @@
                  [environ "1.0.0"]
                  [compojure "1.3.2"]
                  [grafter/vocabularies "0.1.0"]
+                 [grafterizer/tabular_functions "0.1.0-SNAPSHOT"]
                  [ring/ring-defaults "0.1.3"]
                  [ring/ring-session-timeout "0.1.0"]
                  [ring-middleware-format "0.4.0"]

@@ -2,6 +2,8 @@
   
   (:require [grafter.tabular :refer :all]
             [clojure.string :refer [capitalize lower-case upper-case trim trim-newline triml trimr]]
+            [tabular_functions.datatypes :as datatypes]
+            [tabular_functions.pipeline :as new-tabular]
             [grafter.rdf :refer [prefixer s]]
             [grafter.rdf.templater :refer [graph]]
             [grafter.vocabularies.rdf :refer :all]
