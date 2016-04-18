@@ -186,11 +186,12 @@ For more details see the [[http://www.w3.org/TR/html401/interact/forms.html#h-17
 
 The form data =MUST= consist of the following parts:
 
-| Name (form key) | Description                                 | Content-Disposition |
-|-----------------+---------------------------------------------+---------------------|
-| pipeline        | The Grafter Pipeline Code                   | file                |
-| data            | The input file to be transformed            | file                |
-| command         | The name of the pipe/graft function to call | form-data           |
+| Name (form key) | Description                                   | Content-Disposition |
+|-----------------+-----------------------------------------------+---------------------|
+| pipeline        | The Grafter Pipeline Code                     | file                |
+| data            | The input file to be transformed              | file                |
+| command         | The name of the pipe/graft function to call   | form-data           |
+| delimiter       | The separator of csv. Mention tab if it is tsv| form-data           |
 
 If your pipeline code contains a pipe you want to execute, you must
 set the command to be the unqualified name of the function.  e.g. to
