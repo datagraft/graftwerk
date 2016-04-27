@@ -1,44 +1,42 @@
-(defproject graftwerk "0.2.1"
+(defproject scalable-graftwerk "0.1.0-SNAPSHOT"
 
   :url "http://grafter.org/"
-  :description "Service for executing grafter transformations, and generating
-  their previews."
+  :description "FIXME: write description"
 
   :license {:name "Eclipse Public License - v1.0 (c) 2016 Swirrl IT Ltd"
             :url "https://www.eclipse.org/legal/epl-v10.html"}
   :repositories {"local" ~(str (.toURI (java.io.File. "maven_repository")))}
-  :dependencies [[org.clojure/clojure "1.6.0"]
+  :dependencies [[org.clojure/clojure "1.7.0"]
+                 [data-graft/Sparker_2.10 "0.1.0-SNAPSHOT"]
                  [ring-server "0.3.1"]
-                 [com.taoensso/timbre "4.0.1"]
-                 [com.taoensso/tower "3.0.2"]
-                 [selmer "0.8.0"]
-                 [enlive "1.1.5"]
-                 [grafter "0.5.0"]
-                 [clojail "1.0.6"]
+                 [compojure "1.4.0"]
                  [environ "1.0.0"]
-                 [compojure "1.3.2"]
-                 [grafter/vocabularies "0.1.0"]
-                 [grafterizer/tabular_functions "0.1.2"]
+                 [com.taoensso/timbre "4.0.1"]
+                 [bouncer "0.3.2"]
                  [ring/ring-defaults "0.1.3"]
                  [ring/ring-session-timeout "0.1.0"]
-                 [ring-middleware-format "0.4.0"]
-                 [noir-exception "0.2.3"]
-                 [bouncer "0.3.2"]
-                 [org.slf4j/slf4j-simple "1.6.1"]
+                 [ring-middleware-format "0.6.0"]
+                 [selmer "0.8.0"]
                  [prone "0.8.0"]
+                 [noir-exception "0.2.3"]
+                 [clojail "1.0.6"]
+                 [org.clojure/data.csv "0.1.3"]
                  [ww-geo-coords "1.0"]
                  ]
 
-  :min-lein-version "2.5.0"
-  :uberjar-name "graftwerk.jar"
+  ;:min-lein-version "0.1.0-SNAPSHOT"
 
+  :jvm-opts ["-Xmx1024m" "-Djava.security.policy=.java.policy"  "-Djava.security.manager" ]
+  ;:jvm-opts [ "-Xmx1024m"]
+
+  ;TODO: need to remove this and compile carefully only for flambo api classes
+  :aot :all
+  :main graftwerk.core
   :repl-options {:init-ns graftwerk.core
                  :init (-main)
                  :timeout 60000}
+  :uberjar-name "scalable-graftwerk.jar"
 
-  :jvm-opts ["-server" "-Djava.security.manager" "-Djava.security.policy=.java.policy"]
-
-  :main graftwerk.core
 
   :plugins [[lein-ring "0.9.1"]
             [lein-environ "1.0.0"]
@@ -47,21 +45,21 @@
   :ring {:handler graftwerk.handler/app
          :init    graftwerk.handler/init
          :destroy graftwerk.handler/destroy
-         :uberwar-name "graftwerk.war"}
+         :uberwar-name "scalable-graftwerk.war"}
 
-  :profiles
-  {:uberjar {:omit-source true
-             :env {:production true}
 
-             :aot :all}
-   :production {:ring {:open-browser? false
-                       :stacktraces?  false
-                       :auto-reload?  false}}
-   :dev {:dependencies [[ring-mock "0.1.5"]
-                        [prismatic/schema "0.4.3"]
-                        [ring/ring-devel "1.3.2"]
-                        [pjstadig/humane-test-output "0.6.0"]]
 
-         :injections [(require 'pjstadig.humane-test-output)
-                      (pjstadig.humane-test-output/activate!)]
-         :env {:dev true}}})
+
+  :profiles {:uberjar {:aot :all}
+             :provided {:dependencies
+                        [[org.apache.spark/spark-core_2.10 "1.6.0"]
+                         [org.apache.spark/spark-sql_2.10 "1.6.0"]
+                         [com.databricks/spark-csv_2.10 "1.3.0"]]}
+
+             }
+
+
+
+
+
+  )

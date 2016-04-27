@@ -1,21 +1,23 @@
 (ns graftwerk.handler
   (:require [compojure.core :refer [defroutes routes GET]]
-            [graftwerk.routes.evaluate :refer [pipe-route graft-route]]
+            [graftwerk.routes.evaluate :refer [pipe-route
+                                               ]]
             [graftwerk.middleware :refer [common-api-middleware
                                           development-middleware
-                                          production-middleware]]
+                                          production-middleware
+                                          ]]
             [compojure.route :as route]
             [ring.util.response :refer [redirect]]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as appenders]
             [environ.core :refer [env]] :reload))
 
-(defroutes base-routes
-  (GET "/" []
-       ;; Redirect to docs on github
-       (redirect "https://github.com/Swirrl/graftwerk#running-pipes-and-grafts-on-the-whole-dataset"))
-  (route/resources "/" {:root "build"})
-  (route/not-found "Not Found"))
+;(defroutes base-routes
+;  (GET "/" []
+;       ;; Redirect to docs on github
+;       (redirect "https://github.com/Swirrl/graftwerk#running-pipes-and-grafts-on-the-whole-dataset"))
+;  (route/resources "/" {:root "build"})
+;  (route/not-found "Not Found"))
 
 (defn init
   "init will be called once when app is deployed as a servlet on an
@@ -38,8 +40,10 @@
 (def app
   (-> (routes
        #'pipe-route
-       #'graft-route
-       #'base-routes)
+       ;#'graft-route
+       ;#'base-routes
+       )
       common-api-middleware
       development-middleware
-      production-middleware))
+      production-middleware
+      ))
