@@ -14,3 +14,4 @@ pom.xml
 /graftwerk.log
 /.idea
 !/maven_repository/ww-geo-coords/ww-geo-coords/1.0/ww-geo-coords-1.0.jar
+/Result
