@@ -1,399 +1,380 @@
-* About Graftwerk
+* About Scalable Graftwerk
 
-Graftwerk is a RESTful execution service for running [[http://grafter.org/][Grafter
+Scalable Graftwerk is a RESTful execution service for running [[https://github.com/proDataMarket/Sparker][Sparker
 Pipelines]].  It was designed and developed as a backend to support user
-interfaces for building and debugging grafter Linked Data ETL
+interfaces for building and debugging Sparker Data ETL
 pipelines.
 
-It was built as part of the FP7 [[http://project.dapaas.eu/][DaPaaS project]] and functions as part
-of the [[http://datagraft.net/][Datagraft]] service, where it powers the [[https://www.youtube.com/watch?v=zAruS4cEmvk][transformation builder]]
-interface.
+# It was built as part of the FP7 [[http://project.dapaas.eu/][DaPaaS project]] and functions as part
+# of the [[http://datagraft.net/][Datagraft]] service, where it powers the [[https://www.youtube.com/watch?v=zAruS4cEmvk][transformation builder]]
+# interface.
 
-Graftwerk can be used both to execute Grafter pipelines and provide
+Scalable Graftwerk can be used both to execute ETL pipelines on top of DataFrame from [[http://spark.apache.org/][Spark]] and provide
 previews of their outputs.
 
-*NOTE: Apart from occasional patches to support legacy projects this
-project is no longer actively maintained.*
+*NOTE: This is still an experiment versions and only tested in local environment*
 
-A new grafter service superseding this release is planned in the
-future.
-
-Graftwerk currently depends on Grafter 0.5.0.
 
 * Getting Started
-** Running the Graftwerk Server
+** Running the Scalable Graftwerk Server
 
-Graftwerk uses clojail and Java SecurityManagers to sandbox the
-execution of certain code.  For development it is recommended that you
-put the following java policy in your home directory, but production
-users should use something with stronger permissions.  Without it you
-will likely experience =java.security.AccessControlException='s.
-
-#+BEGIN_SRC text
-grant {
-  permission java.security.AllPermission;
-};
-#+END_SRC
-
-Alternatively this can be set by setting the system property
-=java.security.policy= at JVM startup e.g.
-
-#+BEGIN_SRC text
-java -jar graftwerk.jar -Djava.security.policy=~/.java.policy
-#+END_SRC
-
-You can build a release for Dapaas with: =lein uberjar=
+As scalable-graftwerk runs with [[http://spark.apache.org/][Spark]] you need to set minimum heap size to 1024mb.
+If not done use =-Xmx1G= in jvm options.
+This is predefined in project.clj
 
 Starting the server can then be done with
 
-=java -jar graftwerk.jar=
+=java -jar scalable-graftwerk.jar=
 
 Or run in development with:
 
 =lein repl=
 
-The server will start on port 3000, and the root URL will redirect to
-the API documentation on github.  No user interface is provided.
+The server will start on port 3000.
+#  and the root URL will redirect to
+# the API documentation on github.
+ No user interface is provided.
 
 * Running Pipelines
 
-The server provides two routes for running both pipes and grafts,
-there are also two test forms which can be used to fashion well formed
-requests via the web browser.
+The server provides only one routes for running pipes for now.
+# ,
+# there are also two test forms which can be used to fashion well formed
+# requests via the web browser.
 
-It is recommended that you test both of these routes first to
+It is recommended that you test this route first to
 understand how the system works.  You can preview these network
 requests from your browser in the Firefox or Chrome dev tools.  This
-will give you an idea about how to recreate them programmatically;
-though beware that the accept headers the browser sends will be
-different; and force graftwerk to return a default encoding.
-
-** Test Data
-
-We provide two files of test data =example_pipeline.clj= and
-=example-data.csv=.  The server currently only works with CSV files as
-input, Excel file support will be added in the future.
-
-Lets look at the pipeline code:
-
-#+BEGIN_SRC clojure
-(defn ->integer
-  "An example transformation function that converts a string to an integer"
-  [s]
-  (Integer/parseInt s))
-
-(def base-domain (prefixer "http://my-domain.com"))
-
-(def base-graph (prefixer (base-domain "/graph/")))
-
-(def base-id (prefixer (base-domain "/id/")))
-
-(def base-vocab (prefixer (base-domain "/def/")))
-
-(def base-data (prefixer (base-domain "/data/")))
-
-(def make-graph
-  (graph-fn [{:keys [name sex age person-uri gender]}]
-            (graph (base-graph "example")
-                   [person-uri
-                    [rdf:a foaf:Person]
-                    [foaf:gender sex]
-                    [foaf:age age]
-                    [foaf:name (s name)]])))
-
-(defpipe my-pipe
-  "Pipeline to convert tabular persons data into a different tabular format."
-  [data-file]
-  (-> (read-dataset data-file :format :csv)
-      (drop-rows 1)
-      (make-dataset [:name :sex :age])
-      (derive-column :person-uri [:name] base-id)
-      (mapc {:age ->integer
-             :sex {"f" (s "female")
-                   "m" (s "male")}})))
-
-
-(defgraft my-graft
-  "Pipeline to convert the tabular persons data sheet into graph data."
-  my-pipe make-graph)
-#+END_SRC
-
-The important thing to notice is that for security reasons it doesn't include a
-namespace definition.  Thats because this is set by the server.  The namespace
-requires you wish to use can be configured by specifying them in the
-=namespace.edn= file.
-
-#+BEGIN_SRC clojure
-(:require [grafter.tabular :refer :all]
-          [clojure.string]
-          [grafter.rdf.io :refer [s]]
-          [grafter.rdf :refer [prefixer]]
-          [grafter.tabular.melt :refer [melt]]
-          [grafter.rdf.templater :refer [graph]]
-          [grafter.vocabularies.rdf :refer :all]
-          [grafter.vocabularies.qb :refer :all]
-          [grafter.vocabularies.sdmx-measure :refer :all]
-          [grafter.vocabularies.sdmx-attribute :refer :all]
-          [grafter.vocabularies.skos :refer :all]
-          [grafter.vocabularies.dcterms :refer :all])
-#+END_SRC
-
-** Running Pipes
-
-- Visit [[http://localhost:3000/pipe][/pipe]] in your browser to access the test form for pipes.
-
-** Running Grafts
-
-- Visit [[http://localhost:3000/graft][/graft]] in your browser to access the test form for grafts.
-
-* API
-
-*NOTE:* The Graftwerk pipeline runner is a stateless service.  You
-submit requests to it, and receive responses.  It does not persist any
-state across requests.
-
-** Response Codes
-
-The following response codes may be returned on requests:
-
-| Status Code | Name                   | Meaning                                                                                                    |
-|-------------+------------------------+------------------------------------------------------------------------------------------------------------|
-|         200 | Ok                     | The result will be in the response                                                                         |
-|         404 | Not Found              | Invalid service route                                                                                      |
-|         415 | Unsupported Media Type | The server did not understand the supplied data, e.g. a file format that we don't understand was supplied. |
-|         422 | Unprocessable Entity   | The data is understood, but still invalid.  The response object may contain more information.              |
-|         500 | Server Error           | An error occurred.  An error object may be returned in the response.                                        |
-
-** Running pipes and grafts on the whole dataset
-
-| Route             | Method |
-|-------------------+--------|
-| =/evaluate/pipe=  | =POST= |
-| =/evaluate/graft= | =POST= |
-
-Sending a =POST= request to =/evaluate/pipe= or =/evaluate/graft= will evaluate
-the pipeline returning the result based upon the accept header.
-
-Both routes have the same required inputs, but differ in that pipes generate
-tabular outputs and grafts generate graph outputs.  Graft routes do not support
-pagination,
-
-*** Required Parameters
-
-The POSTs body =MUST= contain valid =multipart/form-data= and =MUST=
-have the =Content-Type= of the request set to =multipart/form-data=.
-For more details see the [[http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.2][W3C recommendations on Form Content Types]].
-
-The form data =MUST= consist of the following parts:
-
-| Name (form key) | Description                                 | Content-Disposition |
-|-----------------+---------------------------------------------+---------------------|
-| pipeline        | The Grafter Pipeline Code                   | file                |
-| data            | The input file to be transformed            | file                |
-| command         | The name of the pipe/graft function to call | form-data           |
-
-If your pipeline code contains a pipe you want to execute, you must
-set the command to be the unqualified name of the function.  e.g. to
-run the pipe below you would set command to =my-pipeline=.  This works
-the same for grafts.
-
-#+BEGIN_SRC clojure
-(defpipe my-pipeline [dataset]
-  (-> (read-dataset dataset)
-      (operation ...)
-      (operation ...)
-      (operation ...)))
-#+END_SRC
-
-/NOTE:/ we plan to add support for Excel formats in the future, but
-this is currently unsupported.
-
-*** Response Formats
-
-The =/pipe= route is used to execute the =pipe= part of a
-transformation and consequently can only return tabular data formats,
-it should not be used to execute grafts.
-
-Clients =SHOULD= specify the format they want by setting the accept
-header of the request, or by supplying a format parameter on the URL.
-If no valid format is specified EDN will be returned for pipe routes
-and n-triples for grafts.
-
-It =SHALL= support the following response formats:
-
-| Route Type | Accept Header         |
-|------------+-----------------------|
-| pipe       | application/edn       |
-| pipe       | text/csv              |
-| graft      | application/n-triples |
-
-** Previews
-
-Previews are currently only available on =pipe= routes, with =graft= preview
-support coming in a subsequent version.  Previewing essentially amounts to
-specifying a subset of the input to transform, with results returned in the
-requested format.
-
-Applications are usually best requesting preview responses in the
-=application/edn= format, as this format supports all of the native grafter
-types, which is necessary for reliable end user debugging.
-
-*** Previewing Pipes
-
-You can generate a tabular preview of a =pipe= transformation by calling the
-standard =/evaluate/pipe= route with the following optional parameters to
-specify a page of data to transform and return:
-
-| Parameter   | Type    | Description                                                     |
-|-------------+---------+-----------------------------------------------------------------|
-| =page=      | Integer | Requests the page number =page=.  Assuming =page-size= results. |
-| =page-size= | Integer | The number of results per page.  Defaults to =50=               |
-
-If no =page= number is supplied then the pipeline will return the results of the
-whole pipeline execution in the specified format.
-
-Pages start at page =0=, and there is a default page size of =50= results.
-
-Previews are available in all supported tabular formats; however
-=application/edn= should be preferred for debug interfaces.
-
-*** Previewing Grafts
-
-/NOTE:/ Previewing is not supported yet on the graft route, currently graft runs
-return only all of the results as n-triples.  This section describes
-functionality that is being developed.
-
-You can generate a preview of a =graft= transformation by calling the standard
-=/evaluate/graft= route with the optional =row= attribute set.
-
-| Parameter | Type    | Description                                             |
-|-----------+---------+---------------------------------------------------------|
-| =row=     | Integer | Generates a graph preview of the specified =row= number |
-
-Clients should always request Graft previews in =application/edn= format by
-setting the =Accept= header.
-
-Graft previews inspect the =command= parameter and find the specified graft
-commands =graph-fn= template.  The specified =row= is then transformed via the
-grafts pipe and the data injected into the =graph-fn= template.  Graftwerk
-finally returns a data-structure containing the body of the graph-fn template
-with the column variables substituted for the pipe transformed data.  The
-returned data-structure also contains additional data which may be useful for
-debugging.  This includes the transformed row, and bindings specified in the
-=graph-fn='s arguments list.
-
-For example given the following =graph-fn=
-
-#+BEGIN_SRC clojure
-(def my-graph-template (graph-fn [{:strs [persons-graph-uri person-uri person-name person-age friend-uri friend-name friend-age]}]
-                          (graph persons-graph-uri
-                             [person-uri
-                                [rdf:a foaf:Person]
-                                [foaf:name person-name]
-                                [foaf:age  person-age]
-                                [foaf:knows friend-uri]]
-                             [friend-uri
-                                [rdf:a foaf:Person]
-                                [foaf:name friend-name]
-                                [foaf:age  friend-age]
-                                [foaf:knows person-uri]])))
-#+END_SRC
-
-And the following data (once its been transformed by the grafts pipe):
-
-| persons-graph-uri | person-uri     | person-name | person-age | friend-uri    | friend-name | friend-age |
-|-------------------+----------------+-------------+------------+---------------+-------------+------------|
-| http://graph/     | http://tarzan/ | Tarzan      |         28 | http://jane/  | Jane        |         25 |
-| http://graph/     | http://bob/    | Bob         |         35 | http://alice/ | Alice       |         30 |
-
-Then a request to the =graft= route for =row= =1= with an =Accept= header of
-=application/edn= would return:
-
-#+BEGIN_SRC clojure
-{:bindings
- {:strs
-  [persons-graph-uri person-uri person-name
-   person-age friend-uri friend-name friend-age]},
- :row
- {"friend-age" 30, "friend-name" "Alice", "friend-uri" "http://alice/",
-  "person-age" 35, "person-name" "Bob",  "person-uri" "http://bob/",
-  "persons-graph-uri" "http://graph/"},
- :template
- ((graph
-   "http://graph/"
-   ["http://bob/"
-    [rdf:a foaf:Person]
-    [foaf:name "Bob"]
-    [foaf:age 35]
-    [foaf:knows "http://alice/"]]
-   ["http://alice/"
-    [rdf:a foaf:Person]
-    [foaf:name "Alice"]
-    [foaf:age 30]
-    [foaf:knows "http://bob/"]]))}
-#+END_SRC
-
-The most important piece of the response is the =:template= which is the body of
-the =graph-fn= function with all the column variables substituted for the
-transformed values in the =Dataset=.  The =:row= key contains a the transformed
-data found on the specified row which was use to populate the template, whilst
-=:bindings= contains the bindings specified for the =graph-fn= function.  Most
-of the time users will only be concerned with the context found in a =row=, but
-there is a potential for error in the specification of the bindings by the user,
-and those in the data; so in order to help a user debug in this case we provide
-both.
-
-Note also that currently Graftwerk only expands data that has come from the
-Dataset, other symbols are currently left untouched; however in the future we
-may support previewing the values of these too.
-
-Successful previews will return with an HTTP =200= response code.
-
-Some errors can prevent the rendering of the template altogether; when this
-happens the route will return a =500= response with an error object, containing
-a stacktrace and any other information.  However if the template renders, it may
-still contain error objects will be reflected in the appropriate position in the
-template.
-
-** Response Objects
-
-Responses are in EDN as the format can correctly convey type
-information which would need additional work to represent in JSON.
-
-*** Tabular Data
-
-Pipes support EDN and CSV formats depending on the accept header.  The
-EDN representation of a tabular dataset will follow this structure:
-
-#+BEGIN_SRC clojure
- { :column-names ["one" :two "three"]
-   :rows [{"one" 1 :two 2 "three" 3}
-          {"one" 2 :two 4 "three" 6}] }
-#+END_SRC
-
-*** TODO Error Objects
-
-/NOTE this is not yet supported/
-
-Error objects will be defined as EDN tagged literals and have the
-following properties:
-
-#+BEGIN_SRC clojure
-#grafter.edn/Error {
- :type "java.lang.NullPointerException"
- :message "An error message"
- :stacktrace "..."
-}
-#+END_SRC
-
-HTTP Status codes are used indicate most high level errors, however
-more details on the error may be contained in an EDN Error object.
-
-Error objects may in the future also be returned inside Datasets at
-either the row level, or cell level.
-
-* License
-
-Distributed under the Eclipse Public License, the same as Clojure.
-
-(c) Swirrl IT Ltd 2016
+will give you an idea about how to recreate them programmatically.
+# though beware that the accept headers the browser sends will be
+# different; and force graftwerk to return a default encoding.
+
+# ** Test Data
+#
+# We provide two files of test data =example_pipeline.clj= and
+# =example-data.csv=.  The server currently only works with CSV files as
+# input, Excel file support will be added in the future.
+#
+# Lets look at the pipeline code:
+#
+# #+BEGIN_SRC clojure
+# (defn ->integer
+#   "An example transformation function that converts a string to an integer"
+#   [s]
+#   (Integer/parseInt s))
+#
+# (def base-domain (prefixer "http://my-domain.com"))
+#
+# (def base-graph (prefixer (base-domain "/graph/")))
+#
+# (def base-id (prefixer (base-domain "/id/")))
+#
+# (def base-vocab (prefixer (base-domain "/def/")))
+#
+# (def base-data (prefixer (base-domain "/data/")))
+#
+# (def make-graph
+#   (graph-fn [{:keys [name sex age person-uri gender]}]
+#             (graph (base-graph "example")
+#                    [person-uri
+#                     [rdf:a foaf:Person]
+#                     [foaf:gender sex]
+#                     [foaf:age age]
+#                     [foaf:name (s name)]])))
+#
+# (defpipe my-pipe
+#   "Pipeline to convert tabular persons data into a different tabular format."
+#   [data-file]
+#   (-> (read-dataset data-file :format :csv)
+#       (drop-rows 1)
+#       (make-dataset [:name :sex :age])
+#       (derive-column :person-uri [:name] base-id)
+#       (mapc {:age ->integer
+#              :sex {"f" (s "female")
+#                    "m" (s "male")}})))
+#
+#
+# (defgraft my-graft
+#   "Pipeline to convert the tabular persons data sheet into graph data."
+#   my-pipe make-graph)
+# #+END_SRC
+#
+# The important thing to notice is that for security reasons it doesn't include a
+# namespace definition.  Thats because this is set by the server.  The namespace
+# requires you wish to use can be configured by specifying them in the
+# =namespace.edn= file.
+#
+# #+BEGIN_SRC clojure
+# (:require [grafter.tabular :refer :all]
+#           [clojure.string]
+#           [grafter.rdf.io :refer [s]]
+#           [grafter.rdf :refer [prefixer]]
+#           [grafter.tabular.melt :refer [melt]]
+#           [grafter.rdf.templater :refer [graph]]
+#           [grafter.vocabularies.rdf :refer :all]
+#           [grafter.vocabularies.qb :refer :all]
+#           [grafter.vocabularies.sdmx-measure :refer :all]
+#           [grafter.vocabularies.sdmx-attribute :refer :all]
+#           [grafter.vocabularies.skos :refer :all]
+#           [grafter.vocabularies.dcterms :refer :all])
+# #+END_SRC
+#
+# ** Running Pipes
+#
+# - Visit [[http://localhost:3000/pipe][/pipe]] in your browser to access the test form for pipes.
+#
+# ** Running Grafts
+#
+# - Visit [[http://localhost:3000/graft][/graft]] in your browser to access the test form for grafts.
+#
+# * API
+#
+# *NOTE:* The Graftwerk pipeline runner is a stateless service.  You
+# submit requests to it, and receive responses.  It does not persist any
+# state across requests.
+#
+# ** Response Codes
+#
+# The following response codes may be returned on requests:
+#
+# | Status Code | Name                   | Meaning                                                                                                    |
+# |-------------+------------------------+------------------------------------------------------------------------------------------------------------|
+# |         200 | Ok                     | The result will be in the response                                                                         |
+# |         404 | Not Found              | Invalid service route                                                                                      |
+# |         415 | Unsupported Media Type | The server did not understand the supplied data, e.g. a file format that we don't understand was supplied. |
+# |         422 | Unprocessable Entity   | The data is understood, but still invalid.  The response object may contain more information.              |
+# |         500 | Server Error           | An error occurred.  An error object may be returned in the response.                                        |
+#
+# ** Running pipes and grafts on the whole dataset
+#
+# | Route             | Method |
+# |-------------------+--------|
+# | =/evaluate/pipe=  | =POST= |
+# | =/evaluate/graft= | =POST= |
+#
+# Sending a =POST= request to =/evaluate/pipe= or =/evaluate/graft= will evaluate
+# the pipeline returning the result based upon the accept header.
+#
+# Both routes have the same required inputs, but differ in that pipes generate
+# tabular outputs and grafts generate graph outputs.  Graft routes do not support
+# pagination,
+#
+# *** Required Parameters
+#
+# The POSTs body =MUST= contain valid =multipart/form-data= and =MUST=
+# have the =Content-Type= of the request set to =multipart/form-data=.
+# For more details see the [[http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.2][W3C recommendations on Form Content Types]].
+#
+# The form data =MUST= consist of the following parts:
+#
+# | Name (form key) | Description                                 | Content-Disposition |
+# |-----------------+---------------------------------------------+---------------------|
+# | pipeline        | The Grafter Pipeline Code                   | file                |
+# | data            | The input file to be transformed            | file                |
+# | command         | The name of the pipe/graft function to call | form-data           |
+#
+# If your pipeline code contains a pipe you want to execute, you must
+# set the command to be the unqualified name of the function.  e.g. to
+# run the pipe below you would set command to =my-pipeline=.  This works
+# the same for grafts.
+#
+# #+BEGIN_SRC clojure
+# (defpipe my-pipeline [dataset]
+#   (-> (read-dataset dataset)
+#       (operation ...)
+#       (operation ...)
+#       (operation ...)))
+# #+END_SRC
+#
+# /NOTE:/ we plan to add support for Excel formats in the future, but
+# this is currently unsupported.
+#
+# *** Response Formats
+#
+# The =/pipe= route is used to execute the =pipe= part of a
+# transformation and consequently can only return tabular data formats,
+# it should not be used to execute grafts.
+#
+# Clients =SHOULD= specify the format they want by setting the accept
+# header of the request, or by supplying a format parameter on the URL.
+# If no valid format is specified EDN will be returned for pipe routes
+# and n-triples for grafts.
+#
+# It =SHALL= support the following response formats:
+#
+# | Route Type | Accept Header         |
+# |------------+-----------------------|
+# | pipe       | application/edn       |
+# | pipe       | text/csv              |
+# | graft      | application/n-triples |
+#
+# ** Previews
+#
+# Previews are currently only available on =pipe= routes, with =graft= preview
+# support coming in a subsequent version.  Previewing essentially amounts to
+# specifying a subset of the input to transform, with results returned in the
+# requested format.
+#
+# Applications are usually best requesting preview responses in the
+# =application/edn= format, as this format supports all of the native grafter
+# types, which is necessary for reliable end user debugging.
+#
+# *** Previewing Pipes
+#
+# You can generate a tabular preview of a =pipe= transformation by calling the
+# standard =/evaluate/pipe= route with the following optional parameters to
+# specify a page of data to transform and return:
+#
+# | Parameter   | Type    | Description                                                     |
+# |-------------+---------+-----------------------------------------------------------------|
+# | =page=      | Integer | Requests the page number =page=.  Assuming =page-size= results. |
+# | =page-size= | Integer | The number of results per page.  Defaults to =50=               |
+#
+# If no =page= number is supplied then the pipeline will return the results of the
+# whole pipeline execution in the specified format.
+#
+# Pages start at page =0=, and there is a default page size of =50= results.
+#
+# Previews are available in all supported tabular formats; however
+# =application/edn= should be preferred for debug interfaces.
+#
+# *** Previewing Grafts
+#
+# /NOTE:/ Previewing is not supported yet on the graft route, currently graft runs
+# return only all of the results as n-triples.  This section describes
+# functionality that is being developed.
+#
+# You can generate a preview of a =graft= transformation by calling the standard
+# =/evaluate/graft= route with the optional =row= attribute set.
+#
+# | Parameter | Type    | Description                                             |
+# |-----------+---------+---------------------------------------------------------|
+# | =row=     | Integer | Generates a graph preview of the specified =row= number |
+#
+# Clients should always request Graft previews in =application/edn= format by
+# setting the =Accept= header.
+#
+# Graft previews inspect the =command= parameter and find the specified graft
+# commands =graph-fn= template.  The specified =row= is then transformed via the
+# grafts pipe and the data injected into the =graph-fn= template.  Graftwerk
+# finally returns a data-structure containing the body of the graph-fn template
+# with the column variables substituted for the pipe transformed data.  The
+# returned data-structure also contains additional data which may be useful for
+# debugging.  This includes the transformed row, and bindings specified in the
+# =graph-fn='s arguments list.
+#
+# For example given the following =graph-fn=
+#
+# #+BEGIN_SRC clojure
+# (def my-graph-template (graph-fn [{:strs [persons-graph-uri person-uri person-name person-age friend-uri friend-name friend-age]}]
+#                           (graph persons-graph-uri
+#                              [person-uri
+#                                 [rdf:a foaf:Person]
+#                                 [foaf:name person-name]
+#                                 [foaf:age  person-age]
+#                                 [foaf:knows friend-uri]]
+#                              [friend-uri
+#                                 [rdf:a foaf:Person]
+#                                 [foaf:name friend-name]
+#                                 [foaf:age  friend-age]
+#                                 [foaf:knows person-uri]])))
+# #+END_SRC
+#
+# And the following data (once its been transformed by the grafts pipe):
+#
+# | persons-graph-uri | person-uri     | person-name | person-age | friend-uri    | friend-name | friend-age |
+# |-------------------+----------------+-------------+------------+---------------+-------------+------------|
+# | http://graph/     | http://tarzan/ | Tarzan      |         28 | http://jane/  | Jane        |         25 |
+# | http://graph/     | http://bob/    | Bob         |         35 | http://alice/ | Alice       |         30 |
+#
+# Then a request to the =graft= route for =row= =1= with an =Accept= header of
+# =application/edn= would return:
+#
+# #+BEGIN_SRC clojure
+# {:bindings
+#  {:strs
+#   [persons-graph-uri person-uri person-name
+#    person-age friend-uri friend-name friend-age]},
+#  :row
+#  {"friend-age" 30, "friend-name" "Alice", "friend-uri" "http://alice/",
+#   "person-age" 35, "person-name" "Bob",  "person-uri" "http://bob/",
+#   "persons-graph-uri" "http://graph/"},
+#  :template
+#  ((graph
+#    "http://graph/"
+#    ["http://bob/"
+#     [rdf:a foaf:Person]
+#     [foaf:name "Bob"]
+#     [foaf:age 35]
+#     [foaf:knows "http://alice/"]]
+#    ["http://alice/"
+#     [rdf:a foaf:Person]
+#     [foaf:name "Alice"]
+#     [foaf:age 30]
+#     [foaf:knows "http://bob/"]]))}
+# #+END_SRC
+#
+# The most important piece of the response is the =:template= which is the body of
+# the =graph-fn= function with all the column variables substituted for the
+# transformed values in the =Dataset=.  The =:row= key contains a the transformed
+# data found on the specified row which was use to populate the template, whilst
+# =:bindings= contains the bindings specified for the =graph-fn= function.  Most
+# of the time users will only be concerned with the context found in a =row=, but
+# there is a potential for error in the specification of the bindings by the user,
+# and those in the data; so in order to help a user debug in this case we provide
+# both.
+#
+# Note also that currently Graftwerk only expands data that has come from the
+# Dataset, other symbols are currently left untouched; however in the future we
+# may support previewing the values of these too.
+#
+# Successful previews will return with an HTTP =200= response code.
+#
+# Some errors can prevent the rendering of the template altogether; when this
+# happens the route will return a =500= response with an error object, containing
+# a stacktrace and any other information.  However if the template renders, it may
+# still contain error objects will be reflected in the appropriate position in the
+# template.
+#
+# ** Response Objects
+#
+# Responses are in EDN as the format can correctly convey type
+# information which would need additional work to represent in JSON.
+#
+# *** Tabular Data
+#
+# Pipes support EDN and CSV formats depending on the accept header.  The
+# EDN representation of a tabular dataset will follow this structure:
+#
+# #+BEGIN_SRC clojure
+#  { :column-names ["one" :two "three"]
+#    :rows [{"one" 1 :two 2 "three" 3}
+#           {"one" 2 :two 4 "three" 6}] }
+# #+END_SRC
+#
+# *** TODO Error Objects
+#
+# /NOTE this is not yet supported/
+#
+# Error objects will be defined as EDN tagged literals and have the
+# following properties:
+#
+# #+BEGIN_SRC clojure
+# #grafter.edn/Error {
+#  :type "java.lang.NullPointerException"
+#  :message "An error message"
+#  :stacktrace "..."
+# }
+# #+END_SRC
+#
+# HTTP Status codes are used indicate most high level errors, however
+# more details on the error may be contained in an EDN Error object.
+#
+# Error objects may in the future also be returned inside Datasets at
+# either the row level, or cell level.
+#
+# * License
+#
+# Distributed under the Eclipse Public License, the same as Clojure.
+#
+# (c) Swirrl IT Ltd 2016
