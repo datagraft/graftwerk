@@ -12,7 +12,7 @@ pipelines.
 Scalable Graftwerk can be used both to execute ETL pipelines on top of DataFrame from [[http://spark.apache.org/][Spark]] and provide
 previews of their outputs.
 
-*NOTE: This is still an experiment versions and only tested in local environment*
+*NOTE: This is still an experiment version and only tested in local environment*
 
 
 * Getting Started
