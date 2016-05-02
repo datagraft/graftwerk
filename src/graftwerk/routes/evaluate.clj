@@ -3,16 +3,15 @@
             [graftwerk.validations :refer [if-invalid validate-pipe-run-request]]
             [clojure.string :refer [trim blank?]]
             [clojail.core :refer [safe-read]]
-            [clojure.data.csv :refer [ read-csv]]
-            [graftwerk.wrapper.transformation.common :refer [transformer]]
-    ;[graftwerk.realtime.sparkify :as spr]
+            [clojure.data.json :refer [read-json read-str]]
+            [clojure.data.csv :refer [read-csv]]
+            [graftwerk.wrapper.transformation.common :refer [get-columns save-as-json save-as-csv take-rows]]
             [clojure.edn :as edn]
             [taoensso.timbre :as log]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [cheshire.core :as jsonches])
   (:import [java.io FilePermission]
            [java.util PropertyPermission]
-           [net.datagraft.sparker.core Transformations]
-           ;[org.apache.spark.sql DataFrame]
            )
   )
 
@@ -95,29 +94,23 @@
 
 (defn paginate
   "Paginate the supplied dataset."
-  [ds page page-size]
+  [ page page-size]
     (if (and page (not (empty? page)))
       (let [page-number (Integer/parseInt page)
             page-size (Integer/parseInt (or page-size default-page-size))]
         (log/info "Paging results " page-size " per page.  Page #" page-number)
-        (->>  ds
-              (drop (* page-number page-size))
-              (take page-size)))
-      ds))
+        [(* page-number page-size) (* (inc page-number) page-size )]
+        )
+      ))
 
-(defn dataset->key-map-format [[dataset column-str] page page-size ]
+(defn dataset->key-map-format [[dataset columns] page page-size ]
   (let [lazy-data (with-open [in-file (io/reader dataset)]
                (doall
                  (read-csv in-file)))
-        columns (clojure.string/split column-str #",")
-
         rows  (map (fn [row]
-                     (zipmap columns row ))  lazy-data)     ;to be changed with reading json from data
-        paginated (paginate rows page page-size)            ;change pagination before reading
-        output-data {:column-names columns :rows (or (if empty? paginated) rows)}
-        ;stringified-rows (map (partial map str) output-data)
+                     (zipmap columns row ))  lazy-data)     ;converts output to zipmap
+        output-data {:column-names columns :rows rows}
         ]
-    ;(println "page " paginated)
     output-data
     )
   )
@@ -128,8 +121,9 @@
 
 (defn transform-to-key-mapped-dataset [data-set page page-size]
   (cond (dataset? data-set)
-    (let [columns (.getColumns transformer data-set)
-          dataset-path (.saveDataAsCsv transformer data-set result-dir)
+    (let [columns (get-columns data-set)
+          [from to] (paginate page page-size)
+          dataset-path (save-as-csv  (take-rows data-set from to) result-dir)
           data-to-return (dataset->key-map-format [dataset-path columns] page page-size)]
       data-to-return
       ))
@@ -140,23 +134,12 @@
              (if-invalid [errors (validate-pipe-run-request params)]
                          {:status 422 :body errors}
                          {:status 200 :body
-                          ;(println "testing service pipe" )
-                          ;        (let [start-time (. java.lang.System (clojure.core/nanoTime))  ]
                                   (-> data
                                       (execute-pipeline command pipeline)
                                       (transform-to-key-mapped-dataset page page-size)
                                       ;(paginate page-size page)
                                       )
-                                  ;(clojure.core/prn (clojure.core/str "Elapsed time: "
-                                  ;  (clojure.core/double
-                                  ;     (clojure.core/- (. java.lang.System (clojure.core/nanoTime))
-                                  ;                     start-time)) 1000000.0) " msecs"))
 
-                          ;(load-data data)
-                          ;(-> data
-                          ;              (execute-pipeline command pipeline delimiter sheet-name)
-                          ;              (paginate page-size page)
-                          ;              )
                           })))
 
 

@@ -1,7 +1,8 @@
 (ns graftwerk.wrapper.transformation.common
 
   (:require [taoensso.timbre :as log])
-  (:import [net.datagraft.sparker.core InitSpark Transformations]
+  (:import [net.datagraft.sparker.core InitSpark ]
+           [net.datagraft.sparker.tabular TabularTransformer]
            [org.apache.spark.sql DataFrame]
            [scala.collection JavaConversions]
            [java.util HashMap]
@@ -12,7 +13,7 @@
          (->
            (InitSpark.)
            (.init)
-           (Transformations.)))
+           (TabularTransformer.)))
 
 (defn to-scala-seq [coll]
   (-> coll JavaConversions/asScalaBuffer .toList))
@@ -34,6 +35,10 @@
    (.makeDataSet transformer data-set (to-scala-seq column-names)))
   ([data-set from to]
    (.makeDataSet transformer data-set to from))
+  )
+
+(defn fill-na-values [data-set na-value]
+  (.fillNullValues transformer data-set na-value)
   )
 
 (defn group-and-aggregate
@@ -89,7 +94,7 @@
   )
 
 (defn split-column
-  [data-set transformer col-to-split separator ]
+  [data-set col-to-split separator ]
   (.splitColumn transformer data-set col-to-split separator)
   )
 
@@ -111,6 +116,14 @@
 (defn add-row
   [data-set row-values]
   (.addRow transformer data-set (to-scala-seq row-values))
+  )
+
+(defn take-rows [data-set from to]
+  (.takeRows transformer data-set from to)
+  )
+
+(defn drop-rows [data-set from to]
+  (.dropRows transformer data-set from to)
   )
 
 (defn filter-rows
@@ -147,4 +160,8 @@
 
 (defn save-as-csv [ data-set data-path]
   (.saveDataAsCsv transformer data-set data-path)
-)
+  )
+
+(defn save-as-json [data-set data-path]
+  (.saveDataAsJson transformer data-set data-path)
+  )

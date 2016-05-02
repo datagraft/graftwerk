@@ -7,7 +7,7 @@
             :url "https://www.eclipse.org/legal/epl-v10.html"}
   :repositories {"local" ~(str (.toURI (java.io.File. "maven_repository")))}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [data-graft/Sparker_2.10 "0.1.0-SNAPSHOT"]
+                 [data-graft/sparker_2.10 "0.1.0-SNAPSHOT"]
                  [ring-server "0.3.1"]
                  [compojure "1.4.0"]
                  [environ "1.0.0"]
