@@ -128,7 +128,7 @@
 
 (defn filter-rows
   [data-set cols-to-filter func-str expr-to-filter]
-  (.filterRows transformer data-set (to-scala-seq cols-to-filter) func-str expr-to-filter)
+  (.filterRows transformer data-set (to-scala-seq cols-to-filter) func-str (to-scala-seq expr-to-filter))
   )
 
 (def default-page-size "50")
