@@ -130,7 +130,7 @@
   )
 
 (defroutes pipe-route
-           (POST "/evaluate/pipe" {{:keys [pipeline data page-size page command delimiter sheet-name] :as params} :params}
+           (POST "/evaluate/pipe" {{:keys [pipeline data page-size page command ] :as params} :params}
              (if-invalid [errors (validate-pipe-run-request params)]
                          {:status 422 :body errors}
                          {:status 200 :body

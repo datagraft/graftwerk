@@ -19,7 +19,7 @@
                  [selmer "0.8.0"]
                  [prone "0.8.0"]
                  [noir-exception "0.2.3"]
-                 ;[clojail "1.0.6"]
+                 [clojail "1.0.6"]
                  [org.clojure/data.csv "0.1.3"]
                  [ww-geo-coords "1.0"]
                  ]
@@ -30,7 +30,7 @@
   ;:jvm-opts [ "-Xmx1024m"]
 
   ;TODO: need to remove this and compile carefully only for flambo api classes
-  ;:aot :all
+  :aot :all
   :main graftwerk.core
   :repl-options {:init-ns graftwerk.core
                  :init (-main)
