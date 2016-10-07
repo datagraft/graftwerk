@@ -27,6 +27,7 @@
                  [org.slf4j/slf4j-simple "1.6.1"]
                  [prone "0.8.0"]
                  [ww-geo-coords "1.0"]
+                 [datagraft/geo-converter "0.0.1-SNAPSHOT"]
                  ]
 
   :min-lein-version "2.5.0"
