@@ -61,7 +61,14 @@
 
 (def ^:private mime-type->streamer {"application/csv" stream-csv
                                     "application/edn" stream-edn})
-
+(def ^:private mime-type->serialization-format {"application/n-triples" rdf-ntriples
+                                                "application/rdf+xml" rdf-xml
+                                                "text/turtle" rdf-turtle
+                                                "application/n-quads"  rdf-nquads
+                                                "text/n3" rdf-n3
+                                                "application/trix" rdf-trix
+                                                "application/trig" rdf-trig
+                                                "application/ld+json" rdf-jsonld})
 (defn map-values [f m]
   (let [kvs (map (fn [[k v]] [k (f v)]) m)
         keys (map first kvs)
@@ -134,13 +141,12 @@
           (sequential? body) (do
                                (log/info "About to stream RDF")
                                (-> response
-                                   ;; force n-triples for now to save content-neg headaches...
-                                   (assoc-in [:headers "Content-Type"] "application/n-triples")
+                                   (assoc-in [:headers "Content-Type"] selected-format)
                                    (assoc :body (piped-input-stream (fn [ostream]
                                                                       (try
                                                                         (with-open [writer (clojure.java.io/writer ostream)]
                                                                           (log/info "Serialising RDF")
-                                                                          (grafter.rdf/add (rdf-serializer writer :format rdf-ntriples)
+                                                                          (grafter.rdf/add (rdf-serializer writer :format (mime-type->serialization-format  selected-format))
                                                                                            body))
                                                                         (catch Exception ex
                                                                           (log/warn ex "Unexpected exception whilst streaming RDF"))))))))
