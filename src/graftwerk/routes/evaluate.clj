@@ -12,9 +12,12 @@
             [clojail.testers :refer [secure-tester-without-def blanket blacklist-objects blacklist-packages blacklist-symbols blacklist-nses]]
             [graftwerk.validations :refer [if-invalid valid? validate-pipe-run-request validate-graft-run-request]]
             [grafter.pipeline :as pl]
-            [taoensso.timbre :as log])
+            [taoensso.timbre :as log]
+            [graftwerk.shape.shape-support :refer [convert-shape]]
+            )
   (:import [java.io FilePermission]
-           (clojure.lang LispReader$ReaderException)))
+           (clojure.lang LispReader$ReaderException)
+           (java.util PropertyPermission)))
 
 (def default-namespace-declaration
   '(ns graftwerk.pipeline
@@ -76,8 +79,7 @@
   "Build a clojailed sandbox configured for Grafter pipelines.  Takes
   a parsed sexp containing the grafter pipeline file."
   [pipeline-sexp file-path]
-  (let [context (-> (FilePermission. file-path "read")
-                    permissions
+  (let [context (-> (permissions (FilePermission. file-path "read") (PropertyPermission. "file.separator" "read")  )
                     domain
                     context)
         namespace-form (namespace-declaration)
@@ -92,18 +94,18 @@
     (sb pipeline-sexp)
     sb))
 
-(defn read-dataset-with-filename-meta
-  "Returns an sexp that opens a dataset with read-dataset and sets the supplied
-  filename as metadata.
+;(defn read-dataset-with-filename-meta
+;  "Returns an sexp that opens a dataset with read-dataset and sets the supplied
+;  filename as metadata.
+;
+;  Useful as ring bodges the filename with a tempfile otherwise."
+;  [data-file filename]
+;  `(with-meta
+;     (grafter.tabular/read-dataset ~data-file :format :csv)
+;     {:grafter.tabular/data-source ~filename}))
 
-  Useful as ring bodges the filename with a tempfile otherwise."
-  [data-file filename]
-  `(with-meta
-     (grafter.tabular/read-dataset ~data-file :format :csv)
-     {:grafter.tabular/data-source ~filename}))
-
-(defn evaluate-command [sandbox command data filename]
-  (let [apply-pipe (list command (read-dataset-with-filename-meta data filename))]
+(defn evaluate-command [sandbox command data]
+  (let [apply-pipe (list command data)]
     (log/info "About to apply pipe in sandbox" apply-pipe)
     (sandbox apply-pipe)))
 
@@ -146,16 +148,41 @@
                     code
                     ")"))))
 
+(defn- find-read-shape [pipeline shape-command]
+  "Checks whether the first transformation step's name is equal to expected shape-reading command"
+  (let [pipe (second (first (:body (first pipeline))))      ;; finds out the body of the pipeline form passed which contains the transformation steps. First value is (->) and second value leads to a list of commands.
+        is-shape-reader (= shape-command (name (first pipe)))] ;; check whether the name of the first symbol (assumed read-data always starts the pipeline) is equal to the command
+    is-shape-reader
+    )
+  )
+(defn- get-processable-input [ data pipeline-forms]
+  "Private function to determine \"sandbox-processeble\" input data"
+  ;(println pipeline-forms)
+    (let [is-shape-related (->
+                             pipeline-forms
+                             (pl/find-pipelines (namespace-symbol (namespace-declaration)) {})
+                             (find-read-shape "read-shape-csv")
+                             )
+          temp-file-location (-> data :tempfile .getPath)   ;the default data
+          input-data (if (= true is-shape-related) (convert-shape temp-file-location) temp-file-location )
+          ]
+      (log/info "Input data path" input-data)
+      input-data
+      )
+
+  )
+
 (defn execute-pipeline [data command pipeline]
   "Takes the data to operate on (a ring file map) a command (a
   function name for a pipe or graft) and a pipeline clojure file and
   returns a Grafter dataset."
   (let [forms (read-pipeline pipeline)
         command (symbol command)
-        data-file (-> data :tempfile .getPath)
+        ;data-file (-> data :tempfile .getPath)
+        data-file (get-processable-input data forms)
         sandbox (build-sandbox forms data-file)]
 
-    (evaluate-command sandbox command data-file (:filename data))))
+    (evaluate-command sandbox command data-file )))
 
 (defroutes pipe-route
   (POST "/evaluate/pipe" {{:keys [pipeline data page-size page command] :as params} :params}
@@ -200,11 +227,10 @@
   (let [graft-sym (symbol graft-command)
         pipeline-forms (read-pipeline pipeline)
         [pipe-sym template-sym] (find-pipe-for-graft pipeline-forms graft-sym)
-        data-file (-> data-file .getCanonicalPath)
+        data-file (get-processable-input data pipeline-forms)                                          ;(-> data-file .getCanonicalPath)
         sandbox (build-sandbox pipeline-forms data-file)
 
-        executable-code-form `(let [ds# ~(read-dataset-with-filename-meta data-file filename)]
-                                (grafter.rdf.preview/preview-graph (~pipe-sym ds#) ~template-sym ~row ~(if render-constants? :render-constants false)))]
+        executable-code-form `(grafter.rdf.preview/preview-graph (~pipe-sym ~data-file) ~template-sym ~row ~(if render-constants? :render-constants false))]
 
     (log/info "code form is" executable-code-form)
 

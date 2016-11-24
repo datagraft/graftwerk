@@ -13,7 +13,9 @@
             [grafter.vocabularies.skos :refer :all]
             [grafter.vocabularies.foaf :refer :all]
             [grafter.vocabularies.owl :refer :all]
-            [grafter.vocabularies.dcterms :refer :all])
+            [grafter.vocabularies.dcterms :refer :all]
+            [graftwerk.shape.shape-support :refer :all]
+              )
   (:import [gov.nasa.worldwind.geom.coords.UTMCoord]
             [org.openrdf.model.impl.URIImpl])
 )
