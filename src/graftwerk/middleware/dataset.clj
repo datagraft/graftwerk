@@ -109,6 +109,7 @@
   (fn write-dataset-middleware
     [req]
     (log/info "Received request" req)
+      (log/info "***************app" app)
     (try
       (let [response (app req)
             body (:body response)
